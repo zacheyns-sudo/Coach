@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Filthy Labs — Training Adapter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #f8f7f4;
+      --surface:      #ffffff;
+      --border:       #e5e7eb;
+      --accent:       #16a34a;
+      --accent-light: #f0fdf4;
+      --accent-mid:   #bbf7d0;
+      --text:         #111827;
+      --secondary:    #6b7280;
+      --tertiary:     #9ca3af;
+      --amber:        #f59e0b;
+      --amber-light:  #fffbeb;
+      --amber-border: #fde68a;
+      --danger:       #dc2626;
+      --danger-bg:    #fef2f2;
+      --danger-border:#fecaca;
+      --indigo:       #6366f1;
+      --shadow:       0 1px 4px rgba(0,0,0,0.07);
+      --radius:       12px;
+      --radius-sm:    8px;
+      --sans:         'Plus Jakarta Sans', -apple-system, sans-serif;
+      --body:         'Inter', -apple-system, sans-serif;
+      --mono:         'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Progress bar ── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px; width: 0;
+      background: var(--accent);
+      z-index: 1000;
+      border-radius: 0 1px 1px 0;
+      pointer-events: none;
+      transition: width 0.3s ease;
+    }
+    #progress-bar.loading { width: 70%; transition: width 2.4s cubic-bezier(0.08,0.04,0.08,1); }
+    #progress-bar.done    { width: 100%; transition: width 0.18s ease; }
+
+    /* ── Navbar ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .nav-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .wordmark {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      color: var(--text);
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 44px 0 36px;
+    }
+
+    .hero h1 {
+      font-family: var(--sans);
+      font-size: clamp(26px, 5vw, 38px);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--text);
+      line-height: 1.15;
+    }
+
+    .hero p {
+      margin-top: 8px;
+      color: var(--secondary);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Step progress ── */
+    .step-progress {
+      display: flex;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--tertiary);
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s;
+      white-space: nowrap;
+    }
+
+    .step-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      background: var(--surface);
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .step-name {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .progress-step.active { color: var(--accent); }
+    .progress-step.active .step-dot { background: var(--accent); border-color: var(--accent); color: white; }
+    .progress-step.done   { color: var(--accent); }
+    .progress-step.done .step-dot { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+    .progress-connector {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      margin: 0 10px;
+      min-width: 16px;
+    }
+
+    /* ── Form ── */
+    #form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── Step cards ── */
+    .form-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px 22px 20px;
+    }
+
+    /* Step 4 — conditional, slides in */
+    #step-4 {
+      display: none;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      border-color: #fecaca;
+      border-left: 3px solid var(--danger);
+    }
+
+    #step-4.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .step-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .step-badge {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-light);
+      border: 1px solid var(--accent-mid);
+      border-radius: 4px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+
+    .step-badge--injury {
+      color: var(--danger);
+      background: var(--danger-bg);
+      border-color: var(--danger-border);
+    }
+
+    .step-title {
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    /* ── Field groups inside steps ── */
+    .field-group {
+      margin-bottom: 16px;
+    }
+
+    .field-group:last-child { margin-bottom: 0; }
+
+    .field-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--tertiary);
+      margin-bottom: 7px;
+      display: block;
+    }
+
+    /* ── Quick select ── */
+    .quick-select {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .quick-btn {
+      font-family: var(--body);
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--bg);
+      color: var(--secondary);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      line-height: 1;
+    }
+
+    .quick-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .quick-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+    /* ── Textareas ── */
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--body);
+      font-size: 13.5px;
+      line-height: 1.65;
+      padding: 11px 13px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(22,163,74,0.09);
+    }
+
+    textarea::placeholder { color: var(--tertiary); }
+
+    /* ── Pills ── */
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .pills:last-child { margin-bottom: 0; }
+
+    .pill {
+      font-family: var(--body);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      color: var(--secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .pill:hover { border-color: var(--accent); color: var(--accent); }
+    .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+    /* Injury pill active = red */
+    .pill--injury.active { background: var(--danger); border-color: var(--danger); color: #fff; }
+    .pill--injury:hover  { border-color: var(--danger); color: var(--danger); }
+
+    /* ── Submit ── */
+    .submit-wrap { margin-top: 4px; }
+
+    button[type="submit"] {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px;
+      text-align: center;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      letter-spacing: -0.01em;
+    }
+
+    button[type="submit"]:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(22,163,74,0.28); }
+    button[type="submit"]:active { transform: none; box-shadow: none; }
+    button[type="submit"]:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── Error ── */
+    .error-banner {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      border-left: 3px solid var(--danger);
+      border-radius: var(--radius-sm);
+      color: var(--danger);
+      font-size: 13px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      display: none;
+    }
+    .error-banner.visible { display: block; }
+
+    /* ── Output ── */
+    #output-wrap { margin-top: 52px; display: none; }
+    #output-wrap.visible { display: block; }
+
+    .output-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .output-header .tag {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-light);
+      border: 1px solid var(--accent-mid);
+      border-radius: 4px;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+
+    .output-divider { flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Output cards ── */
+    .output-cards { display: flex; flex-direction: column; gap: 12px; }
+
+    .output-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      opacity: 0;
+      animation: fadeUp 0.3s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .output-card--injury    { border-left-color: var(--danger); }
+    .output-card--exercises { border-left-color: #0891b2; }
+    .output-card--context   { border-left-color: var(--amber); }
+    .output-card--week      { border-left-color: var(--accent); }
+    .output-card--today     { border-left-color: var(--accent); background: var(--accent-light); }
+    .output-card--watch     { border-left-color: var(--amber); }
+
+    .output-card__header {
+      padding: 14px 20px 11px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .output-card--today .output-card__header { border-bottom-color: var(--accent-mid); }
+    .output-card--watch .output-card__header { border-bottom-color: var(--amber-border); }
+    .output-card--injury .output-card__header { border-bottom-color: var(--danger-border); }
+
+    .output-card__title {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .output-card--injury    .output-card__title { color: var(--danger); }
+    .output-card--exercises .output-card__title { color: #0891b2; }
+    .output-card--context   .output-card__title { color: var(--amber); }
+    .output-card--week      .output-card__title { color: var(--accent); }
+    .output-card--today     .output-card__title { color: var(--accent); }
+    .output-card--watch     .output-card__title { color: var(--amber); }
+
+    .output-card__body { padding: 16px 20px 20px; }
+
+    /* ── Injury disclaimer banner ── */
+    .injury-disclaimer {
+      background: var(--amber-light);
+      border: 1px solid var(--amber-border);
+      border-left: 4px solid var(--danger);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      font-size: 13.5px;
+      font-weight: 600;
+      line-height: 1.55;
+      color: #92400e;
+    }
+
+    .output-card__body p {
+      font-size: 13.5px;
+      line-height: 1.72;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .output-card__body p:last-child { margin-bottom: 0; }
+
+    .output-card__body ul, .output-card__body ol { padding-left: 18px; margin-bottom: 8px; }
+
+    .output-card__body li {
+      font-size: 13.5px;
+      line-height: 1.65;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+
+    .output-card__body strong { font-weight: 600; }
+
+    .output-card__body em {
+      color: var(--secondary);
+      font-style: normal;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    /* ── Week table ── */
+    .week-table { width: 100%; border-collapse: collapse; }
+    .week-table thead tr { border-bottom: 1px solid var(--border); }
+
+    .week-table th {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--tertiary);
+      text-align: left;
+      padding: 0 14px 10px 0;
+    }
+
+    .week-table td {
+      padding: 10px 14px 10px 0;
+      vertical-align: top;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    .week-table tr:last-child td { border-bottom: none; }
+    .week-table .day-cell { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--secondary); white-space: nowrap; width: 76px; }
+    .week-table .session-cell { font-weight: 500; }
+    .week-table .purpose-cell { color: var(--secondary); font-size: 12.5px; }
+    .week-table .rest-row td { color: var(--tertiary); }
+    .week-table .rest-row .day-cell { color: var(--tertiary); }
+
+    /* Monitor badge inline in week table */
+    .monitor-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: var(--amber-light);
+      border: 1px solid var(--amber-border);
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 500;
+      color: var(--amber);
+      padding: 1px 5px;
+      margin-left: 6px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    /* ── Watch badges ── */
+    .badge-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .badge {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--amber-light);
+      border: 1px solid var(--amber-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text);
+    }
+
+    .badge-flag { font-family: var(--mono); font-size: 11px; color: var(--amber); flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Stream card ── */
+    .stream-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      font-size: 13.5px;
+      line-height: 1.72;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ── Cursor ── */
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 0.88em;
+      background: var(--accent);
+      margin-left: 1px;
+      vertical-align: text-bottom;
+      animation: blink 0.9s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 640px) {
+      main { padding: 0 16px 64px; }
+      .nav-inner { padding: 0 16px; }
+      .wordmark { display: none; }
+      .hero { padding: 32px 0 24px; }
+      .step-name { display: none; }
+      .form-step { padding: 18px 16px 16px; }
+      .week-table .purpose-cell { display: none; }
+      .output-card__body { padding: 14px 16px 16px; }
+      .output-card__header { padding: 12px 16px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="#">
+      <svg viewBox="0 0 22 28" width="18" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="flask-clip">
+            <path d="M8,1 H14 V10 L20,16 A9,9 0 1,1 2,16 L8,10 Z"/>
+          </clipPath>
+        </defs>
+        <path d="M8,1 H14 V10 L20,16 A9,9 0 1,1 2,16 L8,10 Z"
+              fill="#f0fdf4" stroke="#16a34a" stroke-width="1.4" stroke-linejoin="round"/>
+        <rect x="0" y="19" width="22" height="12" fill="#16a34a" fill-opacity="0.82" clip-path="url(#flask-clip)"/>
+        <circle cx="8"  cy="22" r="1.1"  fill="white" fill-opacity="0.65" clip-path="url(#flask-clip)"/>
+        <circle cx="13" cy="21" r="1.35" fill="white" fill-opacity="0.52" clip-path="url(#flask-clip)"/>
+        <circle cx="10" cy="24" r="0.85" fill="white" fill-opacity="0.60" clip-path="url(#flask-clip)"/>
+      </svg>
+      <span class="wordmark">FILTHY LABS</span>
+    </a>
+  </div>
+</nav>
+
+<main>
+  <div class="hero">
+    <h1>Your week, restructured.</h1>
+    <p>Tell us your plan, what disrupted it, and what you have left — we'll rebuild it with purpose.</p>
+  </div>
+
+  <!-- Step progress -->
+  <div class="step-progress" id="step-progress">
+    <div class="progress-step active" data-n="1">
+      <div class="step-dot">1</div>
+      <span class="step-name">Training Plan</span>
+    </div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" data-n="2">
+      <div class="step-dot">2</div>
+      <span class="step-name">Disruption</span>
+    </div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" data-n="3">
+      <div class="step-dot">3</div>
+      <span class="step-name">Available</span>
+    </div>
+    <!-- Step 4 dot: hidden until injury selected -->
+    <div class="progress-connector" id="progress-conn-4" style="display:none;"></div>
+    <div class="progress-step" data-n="4" id="progress-step-4" style="display:none;">
+      <div class="step-dot" style="border-color:#fecaca; color:var(--danger);">4</div>
+      <span class="step-name" style="color:var(--danger);">Injury</span>
+    </div>
+  </div>
+
+  <form id="form" autocomplete="off">
+
+    <!-- Step 1 — Training Plan -->
+    <div class="form-step" id="step-1" data-step="1">
+      <div class="step-header">
+        <span class="step-badge">Step 1</span>
+        <span class="step-title">Training Plan</span>
+      </div>
+      <div class="quick-select">
+        <button type="button" class="quick-btn" data-plan="running">Running Plan</button>
+        <button type="button" class="quick-btn" data-plan="hybrid">Hybrid / Hyrox</button>
+        <button type="button" class="quick-btn" data-plan="sport">Team Sport</button>
+        <button type="button" class="quick-btn" data-plan="custom">Custom</button>
+      </div>
+      <textarea
+        id="training_plan"
+        name="training_plan"
+        rows="5"
+        placeholder="Mon: Easy 45min Z2 / Tue: 6×1km threshold / Wed: Rest..."
+        required
+      ></textarea>
+    </div>
+
+    <!-- Step 2 — Disruption -->
+    <div class="form-step" id="step-2" data-step="2">
+      <div class="step-header">
+        <span class="step-badge">Step 2</span>
+        <span class="step-title">What disrupted your week?</span>
+      </div>
+      <div class="pills" id="disruption-pills">
+        <button type="button" class="pill" data-value="Sick">Sick</button>
+        <button type="button" class="pill" data-value="Injured" id="pill-injured">Injured</button>
+        <button type="button" class="pill" data-value="Fatigued">Fatigued</button>
+        <button type="button" class="pill" data-value="Travel">Travel</button>
+        <button type="button" class="pill" data-value="Too Busy">Too Busy</button>
+        <button type="button" class="pill" data-value="Missed Sessions">Missed Sessions</button>
+      </div>
+      <span class="field-label">Any extra context?</span>
+      <textarea
+        id="disruption-context"
+        rows="2"
+        placeholder="e.g. Chest cold, feeling 80% now. Behind on sleep."
+      ></textarea>
+    </div>
+
+    <!-- Step 3 — Available -->
+    <div class="form-step" id="step-3" data-step="3">
+      <div class="step-header">
+        <span class="step-badge">Step 3</span>
+        <span class="step-title">What do you have this week?</span>
+      </div>
+      <div class="pills" id="available-pills">
+        <button type="button" class="pill" data-value="Gym Access">Gym Access</button>
+        <button type="button" class="pill" data-value="Treadmill Only">Treadmill Only</button>
+        <button type="button" class="pill" data-value="No Back-to-Back Hard Days">No Back-to-Back Hard Days</button>
+        <button type="button" class="pill" data-value="Limited Time">Limited Time</button>
+        <button type="button" class="pill" data-value="Nothing" id="avail-nothing">Nothing</button>
+        <button type="button" class="pill pill--other" id="avail-other-btn" data-value="Other">Other</button>
+      </div>
+      <div id="avail-other-wrap" style="display:none; margin-top:8px;">
+        <textarea id="avail-other-text" rows="2" placeholder="Describe what you have available..."></textarea>
+      </div>
+    </div>
+
+    <!-- Step 4 — Injury Context (conditional) -->
+    <div class="form-step" id="step-4" data-step="4">
+      <div class="step-header">
+        <span class="step-badge step-badge--injury">Step 4 — Injury</span>
+        <span class="step-title">Tell us about the injury</span>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Sport or activity (optional)</span>
+        <input
+          type="text"
+          id="injury-sport"
+          placeholder="e.g. football, basketball, tennis, cycling..."
+          style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--body);font-size:13.5px;padding:10px 13px;outline:none;transition:border-color 0.15s;"
+          onfocus="this.style.borderColor='var(--accent)'"
+          onblur="this.style.borderColor='var(--border)'"
+        />
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Where is the pain and what does it feel like?</span>
+        <textarea
+          id="injury-desc"
+          rows="2"
+          placeholder="e.g. sharp pain on outside of left knee when running downhill"
+        ></textarea>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">How did it come on?</span>
+        <div class="pills" id="injury-onset-pills">
+          <button type="button" class="pill pill--injury" data-value="Came on suddenly">Came on suddenly</button>
+          <button type="button" class="pill pill--injury" data-value="Built up gradually">Built up gradually</button>
+          <button type="button" class="pill pill--injury" data-value="Getting worse">Getting worse</button>
+          <button type="button" class="pill pill--injury" data-value="Holding steady">Holding steady</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Pain type</span>
+        <div class="pills" id="injury-type-pills">
+          <button type="button" class="pill pill--injury" data-value="Sharp">Sharp</button>
+          <button type="button" class="pill pill--injury" data-value="Dull / Aching">Dull / Aching</button>
+          <button type="button" class="pill pill--injury" data-value="Burning">Burning</button>
+          <button type="button" class="pill pill--injury" data-value="Stiffness only">Stiffness only</button>
+          <button type="button" class="pill pill--injury" data-value="No pain now, had it recently">No pain now, recently</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="submit-wrap">
+      <button type="submit" id="submit-btn">Rebuild My Week →</button>
+    </div>
+
+    <div class="error-banner" id="error-banner"></div>
+  </form>
+
+  <!-- Output -->
+  <div id="output-wrap">
+    <div class="output-header">
+      <span class="tag">Adapted plan</span>
+      <div class="output-divider"></div>
+    </div>
+    <div id="output"></div>
+  </div>
+</main>
+
+<script>
+  // ── Plan pre-fills ────────────────────────────────────────────
+  const PLANS = {
+    running: `Mon: Easy 45 min Z2
+Tue: 6×1km @ threshold, 90 sec recovery
+Wed: Rest
+Thu: Tempo run 35 min
+Fri: Easy 30 min
+Sat: Long run 1:45 easy
+Sun: Rest`,
+    hybrid: `Mon: Strength — upper body push/pull, 60 min
+Tue: Run 8 km easy + accessory work
+Wed: Rest
+Thu: Hyrox simulation 45 min
+Fri: Strength — lower body squat focus, 60 min
+Sat: Long run 12 km easy Z2
+Sun: Recovery or rest`,
+    sport: `Tue: Club training / team practice, 90 min
+Thu: Gym — strength & conditioning, 45 min
+Sat: Match day
+Sun: Rest / recovery walk`,
+    custom: ``
+  };
+
+  document.querySelectorAll('.quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const ta = document.getElementById('training_plan');
+      ta.value = PLANS[btn.dataset.plan];
+      if (btn.dataset.plan === 'custom') ta.focus();
+    });
+  });
+
+  // ── Pill toggles ──────────────────────────────────────────────
+  document.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', () => pill.classList.toggle('active'));
+  });
+
+  // "Injured" pill — show/hide Step 4
+  document.getElementById('pill-injured').addEventListener('click', () => {
+    const isActive = document.getElementById('pill-injured').classList.contains('active');
+    toggleStep4(isActive);
+  });
+
+  function toggleStep4(show) {
+    const step4 = document.getElementById('step-4');
+    const conn4 = document.getElementById('progress-conn-4');
+    const dot4  = document.getElementById('progress-step-4');
+
+    if (show) {
+      step4.style.display = 'block';
+      conn4.style.display = 'block';
+      dot4.style.display  = 'flex';
+      requestAnimationFrame(() => requestAnimationFrame(() => step4.classList.add('visible')));
+      updateProgress();
+      step4.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      step4.classList.remove('visible');
+      conn4.style.display = 'none';
+      dot4.style.display  = 'none';
+      setTimeout(() => { step4.style.display = 'none'; }, 320);
+      // Clear injury fields
+      document.getElementById('injury-sport').value = '';
+      document.getElementById('injury-desc').value = '';
+      document.querySelectorAll('#injury-onset-pills .pill, #injury-type-pills .pill')
+        .forEach(p => p.classList.remove('active'));
+      updateProgress();
+    }
+  }
+
+  // "Nothing" in available clears other pills
+  document.getElementById('avail-nothing').addEventListener('click', () => {
+    if (document.getElementById('avail-nothing').classList.contains('active')) {
+      document.querySelectorAll('#available-pills .pill').forEach(p => {
+        if (p.id !== 'avail-nothing') p.classList.remove('active');
+      });
+      document.getElementById('avail-other-wrap').style.display = 'none';
+    }
+  });
+
+  // Any other available pill deselects "Nothing"
+  document.querySelectorAll('#available-pills .pill').forEach(pill => {
+    if (pill.id === 'avail-nothing') return;
+    pill.addEventListener('click', () => {
+      if (pill.classList.contains('active'))
+        document.getElementById('avail-nothing').classList.remove('active');
+    });
+  });
+
+  // "Other" available pill toggles text box
+  document.getElementById('avail-other-btn').addEventListener('click', () => {
+    const isActive = document.getElementById('avail-other-btn').classList.contains('active');
+    document.getElementById('avail-other-wrap').style.display = isActive ? 'block' : 'none';
+    if (isActive) document.getElementById('avail-other-text').focus();
+  });
+
+  // ── Step progress (scroll-based) ──────────────────────────────
+  function updateProgress() {
+    const stepIds = ['step-1','step-2','step-3','step-4'];
+    const threshold = window.innerHeight * 0.45;
+    let current = 1;
+    stepIds.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el && el.style.display !== 'none' && el.getBoundingClientRect().top < threshold)
+        current = i + 1;
+    });
+    document.querySelectorAll('.progress-step').forEach(el => {
+      const n = parseInt(el.dataset.n);
+      el.classList.toggle('active', n === current);
+      el.classList.toggle('done',   n < current);
+    });
+  }
+
+  window.addEventListener('scroll', updateProgress, { passive: true });
+  updateProgress();
+
+  // Click progress steps to scroll to section
+  document.querySelectorAll('.progress-step').forEach(el => {
+    el.addEventListener('click', () => {
+      const target = document.getElementById('step-' + el.dataset.n);
+      if (target && target.style.display !== 'none') {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // ── Progress bar ──────────────────────────────────────────────
+  const progressBar = document.getElementById('progress-bar');
+  function progressStart() {
+    progressBar.className = '';
+    progressBar.getBoundingClientRect();
+    progressBar.className = 'loading';
+  }
+  function progressDone() {
+    progressBar.className = 'done';
+    setTimeout(() => { progressBar.className = ''; }, 300);
+  }
+
+  // ── Markdown helpers ──────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function inlineMd(s) {
+    return escHtml(s)
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,          '<em>$1</em>')
+      .replace(/`([^`]+)`/g,          '<code>$1</code>');
+  }
+
+  function blockMd(content) {
+    const lines = content.split('\n');
+    let html = '', inList = false;
+    for (const line of lines) {
+      const t = line.trim();
+      if (/^-{3,}$/.test(t)) continue; // strip horizontal rules
+      if (!t) { if (inList) { html += '</ul>'; inList = false; } continue; }
+      const lm = t.match(/^[-*]\s+(.+)/);
+      if (lm) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += `<li>${inlineMd(lm[1])}</li>`;
+      } else {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += `<p>${inlineMd(t)}</p>`;
+      }
+    }
+    if (inList) html += '</ul>';
+    return html;
+  }
+
+  // ── Section parser ────────────────────────────────────────────
+  function parseSections(raw) {
+    const sections = [];
+    const re = /^#{1,3}\s+(.+)$/gm;
+    let m, lastTitle = null, lastIdx = 0;
+    while ((m = re.exec(raw)) !== null) {
+      if (lastTitle !== null)
+        sections.push({ title: lastTitle, content: raw.slice(lastIdx, m.index).trim() });
+      lastTitle = m[1].trim();
+      lastIdx = re.lastIndex;
+    }
+    if (lastTitle !== null)
+      sections.push({ title: lastTitle, content: raw.slice(lastIdx).trim() });
+    return sections;
+  }
+
+  // ── Week table ────────────────────────────────────────────────
+  function parseWeekRows(content) {
+    const rows = [];
+    const lines = content.split('\n');
+    let i = 0;
+    while (i < lines.length) {
+      const m = lines[i].match(/^[-*]\s+\*\*(.+?)\*\*:?\s*(.*)/);
+      if (m) {
+        const day = m[1].trim();
+        let session = m[2].trim();
+        let purpose = '';
+        i++;
+        while (i < lines.length && /^(\s{2,}|\t)/.test(lines[i])) {
+          const s = lines[i].trim();
+          const pm = s.match(/\*[Pp]urpose\*:?\s*(.+)/);
+          if (pm) purpose = pm[1];
+          i++;
+        }
+        rows.push({ day, session: session || 'Rest', purpose });
+      } else { i++; }
+    }
+    return rows;
+  }
+
+  function renderWeekTable(rows) {
+    const isRest = s => /^rest$/i.test(s.trim());
+    const formatSession = s => {
+      // Detect [⚠️ MONITOR] tag and replace with badge
+      return inlineMd(s).replace(
+        /\[⚠️?\s*MONITOR\]/gi,
+        '<span class="monitor-badge">⚠ monitor</span>'
+      );
+    };
+    const trs = rows.map(({ day, session, purpose }) => {
+      const rc = isRest(session) ? ' class="rest-row"' : '';
+      return `<tr${rc}>
+        <td class="day-cell">${escHtml(day)}</td>
+        <td class="session-cell">${formatSession(session)}</td>
+        <td class="purpose-cell">${purpose ? inlineMd(purpose) : ''}</td>
+      </tr>`;
+    }).join('');
+    return `<table class="week-table">
+      <thead><tr><th>Day</th><th>Session</th><th>Purpose</th></tr></thead>
+      <tbody>${trs}</tbody>
+    </table>`;
+  }
+
+  function renderBadges(content) {
+    const items = [];
+    for (const line of content.split('\n')) {
+      const m = line.match(/^[-*\d.]+\s+(.+)/);
+      if (m) items.push(m[1].trim());
+    }
+    if (!items.length) return blockMd(content);
+    return `<div class="badge-list">${
+      items.map(t =>
+        `<div class="badge"><span class="badge-flag">!</span><span>${inlineMd(t)}</span></div>`
+      ).join('')
+    }</div>`;
+  }
+
+  // ── Card renderer ─────────────────────────────────────────────
+  const DISCLAIMER = `<div class="injury-disclaimer">
+    ⚠️ This is not a medical diagnosis. Do not train through pain without consulting a qualified physiotherapist or doctor first. The information below is for general education only.
+  </div>`;
+
+  function renderCard(section, idx) {
+    const key = section.title.toLowerCase();
+    let type, body;
+
+    if (key.includes('injury') || key.includes('injur')) {
+      type = 'injury';
+      body = DISCLAIMER + blockMd(section.content);
+    } else if (key.includes('recovery') && key.includes('exercise')) {
+      type = 'exercises';
+      body = blockMd(section.content);
+    } else if (key.includes('restructured') || (key.includes('week') && !key.includes('watch'))) {
+      type = 'week';
+      const rows = parseWeekRows(section.content);
+      body = rows.length ? renderWeekTable(rows) : blockMd(section.content);
+    } else if (key.includes('today')) {
+      type = 'today';
+      body = blockMd(section.content);
+    } else if (key.includes('watch') || key.includes('flag')) {
+      type = 'watch';
+      body = renderBadges(section.content);
+    } else {
+      type = 'context';
+      body = blockMd(section.content);
+    }
+
+    return `<div class="output-card output-card--${type}" style="animation-delay:${idx * 0.07}s">
+      <div class="output-card__header">
+        <span class="output-card__title">${escHtml(section.title)}</span>
+      </div>
+      <div class="output-card__body">${body}</div>
+    </div>`;
+  }
+
+  function renderOutput(raw) {
+    const sections = parseSections(raw);
+    if (!sections.length)
+      return `<div class="stream-card">${blockMd(raw)}</div>`;
+    return `<div class="output-cards">${sections.map((s, i) => renderCard(s, i)).join('')}</div>`;
+  }
+
+  function previewMd(md) {
+    return escHtml(md)
+      .replace(/^-{3,}$/gm, '')
+      .replace(/^#{1,3}\s+(.+)$/gm, '<strong>$1</strong>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br>');
+  }
+
+  // ── Form submit ───────────────────────────────────────────────
+  const form        = document.getElementById('form');
+  const submitBtn   = document.getElementById('submit-btn');
+  const outputWrap  = document.getElementById('output-wrap');
+  const output      = document.getElementById('output');
+  const errorBanner = document.getElementById('error-banner');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const training_plan = document.getElementById('training_plan').value.trim();
+
+    const disruption_pills = [...document.querySelectorAll('#disruption-pills .pill.active')]
+      .map(p => p.dataset.value).join(', ');
+    const disruption_context = document.getElementById('disruption-context').value.trim();
+    const disruption = [disruption_pills, disruption_context].filter(Boolean).join('. ');
+
+    const available_pills = [...document.querySelectorAll('#available-pills .pill.active')]
+      .map(p => p.dataset.value).join(', ');
+    const available_other = document.getElementById('avail-other-btn').classList.contains('active')
+      ? document.getElementById('avail-other-text').value.trim() : '';
+    const available = [available_pills, available_other].filter(Boolean).join('. ');
+
+    // Build injury_context if Step 4 is visible
+    let injury_context = '';
+    const step4Visible = document.getElementById('step-4').style.display !== 'none';
+    if (step4Visible) {
+      const sport  = document.getElementById('injury-sport').value.trim();
+      const desc   = document.getElementById('injury-desc').value.trim();
+      const onset  = [...document.querySelectorAll('#injury-onset-pills .pill.active')].map(p => p.dataset.value).join(', ');
+      const itype  = [...document.querySelectorAll('#injury-type-pills .pill.active')].map(p => p.dataset.value).join(', ');
+      injury_context = [
+        sport  ? `Sport: ${sport}` : '',
+        desc   ? `Location and feel: ${desc}` : '',
+        onset  ? `Onset: ${onset}` : '',
+        itype  ? `Pain type: ${itype}` : ''
+      ].filter(Boolean).join('. ');
+    }
+
+    if (!training_plan) {
+      errorBanner.textContent = 'Please add your training plan in Step 1.';
+      errorBanner.classList.add('visible');
+      document.getElementById('step-1').scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    if (!disruption) {
+      errorBanner.textContent = 'Please select at least one disruption in Step 2.';
+      errorBanner.classList.add('visible');
+      document.getElementById('step-2').scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Rebuilding...';
+    errorBanner.classList.remove('visible');
+    outputWrap.classList.remove('visible');
+    output.innerHTML = '';
+    progressStart();
+
+    try {
+      const resp = await fetch('/api/adapt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ training_plan, disruption, available, injury_context }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error || `Server error ${resp.status}`);
+      }
+
+      outputWrap.classList.add('visible');
+      output.innerHTML = `<div class="stream-card"><span class="cursor"></span></div>`;
+      outputWrap.scrollIntoView({ behavior: 'smooth' });
+
+      const reader  = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let raw = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        raw += decoder.decode(value, { stream: true });
+        output.innerHTML = `<div class="stream-card">${previewMd(raw)}<span class="cursor"></span></div>`;
+      }
+
+      output.innerHTML = renderOutput(raw);
+
+    } catch (err) {
+      errorBanner.textContent = `Error: ${err.message}`;
+      errorBanner.classList.add('visible');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Rebuild My Week →';
+      progressDone();
+    }
+  });
+</script>
+
+</body>
+</html>
