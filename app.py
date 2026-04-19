@@ -1,4 +1,5 @@
 import os
+import datetime
 import anthropic
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 
@@ -88,7 +89,20 @@ Specific actionable instructions for today's session. Include:
 ### Watch this week
 2–3 specific flags — warning signs, things to monitor, go/no-go criteria for harder sessions later in the week.
 
-Be direct. No padding. No motivational fluff. Athletes come here for a plan, not a pep talk."""
+Be direct. No padding. No motivational fluff. Athletes come here for a plan, not a pep talk.
+
+## When disruption history is provided:
+
+If the athlete has logged 3 or more disruptions in the past 6 weeks, append a final section titled exactly "### Mesocycle observations" after everything else.
+
+Scan the history for patterns:
+- **Same session type repeatedly dropped** (e.g. long run missed 3 weeks in a row) → the plan isn't realistic for their life; suggest restructuring the mesocycle so that session sits somewhere more resilient
+- **Same disruption cause recurring** (illness, fatigue, overload) → flag possible overreaching, undersleeping, or insufficient recovery; suggest a deload or volume reduction
+- **Phase misalignment** (race week keeps getting disrupted) → race timing or base fitness may be off; suggest adjusting the goal race or extending the build
+
+Give 1–2 concrete observations. If no clear pattern exists, say so directly — do not manufacture one. When patterns do exist, be specific: "rebuild the next 4-week block with a deload every 3rd week" or "shift your long run from Sat to Fri — Saturdays have been your most disrupted day."
+
+This section is the whole reason the athlete came back. Make it earn its place."""
 
 
 @app.route("/")
@@ -103,6 +117,7 @@ def adapt():
     disruption = data.get("disruption", "").strip()
     phase = data.get("phase", "").strip()
     injury_context = data.get("injury_context", "").strip()
+    history = data.get("history") or []
 
     if not training_plan or not disruption:
         return jsonify({"error": "Training plan and disruption are required."}), 400
@@ -110,18 +125,35 @@ def adapt():
     phase_block = f"\n\n## Training phase:\n{phase}" if phase else ""
     injury_block = f"\n\n## Injury details:\n{injury_context}" if injury_context else ""
 
+    history_block = ""
+    if isinstance(history, list) and len(history) >= 3:
+        lines = []
+        now = datetime.datetime.now()
+        for h in history:
+            try:
+                dt = datetime.datetime.fromtimestamp(int(h.get("date", 0)) / 1000)
+                days_ago = (now - dt).days
+            except Exception:
+                days_ago = "?"
+            h_phase = h.get("phase") or "unspecified"
+            h_disrupt = (h.get("disruption") or "").strip()
+            h_injury = (h.get("injuryContext") or "").strip()
+            suffix = f" — injury: {h_injury}" if h_injury else ""
+            lines.append(f"- {days_ago} days ago · {h_phase} phase · {h_disrupt}{suffix}")
+        history_block = "\n\n## Recent disruption history (last 6 weeks):\n" + "\n".join(lines)
+
     user_message = f"""## Original training plan for the week:
 {training_plan}{phase_block}
 
 ## What happened (disruption):
-{disruption}{injury_block}
+{disruption}{injury_block}{history_block}
 
 Restructure my week."""
 
     def generate():
         with client.messages.stream(
             model="claude-opus-4-7",
-            max_tokens=1800,
+            max_tokens=2600,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_message}],
         ) as stream:

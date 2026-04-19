@@ -216,6 +216,89 @@
       margin-bottom: 16px;
     }
 
+    .saved-chip {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--tertiary);
+    }
+    .saved-chip a {
+      color: var(--danger);
+      text-decoration: none;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+    .saved-chip a:hover { text-decoration: underline; }
+
+    /* History panel */
+    #history-panel { margin-top: 22px; }
+
+    .history-toggle {
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .history-toggle:hover { color: var(--text); }
+    .history-caret { transition: transform 0.2s; display: inline-block; }
+    .history-toggle.open .history-caret { transform: rotate(90deg); }
+    .history-count { color: var(--tertiary); }
+
+    .history-list {
+      display: none;
+      margin-top: 12px;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .history-list.open { display: flex; }
+
+    .history-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .history-item__date {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--tertiary);
+      white-space: nowrap;
+      margin-top: 2px;
+      min-width: 80px;
+    }
+    .history-item__body { flex: 1; line-height: 1.5; }
+    .history-item__phase {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-light);
+      border: 1px solid var(--accent-mid);
+      border-radius: 3px;
+      padding: 1px 5px;
+      margin-right: 6px;
+      vertical-align: 1px;
+    }
+
     .step-badge {
       font-family: var(--mono);
       font-size: 9.5px;
@@ -666,6 +749,7 @@
       <div class="step-header">
         <span class="step-badge">Step 1</span>
         <span class="step-title">Training Plan</span>
+        <span class="saved-chip" id="saved-chip" style="display:none;">Saved<a href="#" id="clear-plan">clear</a></span>
       </div>
       <div class="quick-select">
         <button type="button" class="quick-btn" data-plan="running">Running Plan</button>
@@ -771,6 +855,16 @@
     <div class="error-banner" id="error-banner"></div>
   </form>
 
+  <!-- Disruption history -->
+  <div id="history-panel" style="display:none;">
+    <button type="button" class="history-toggle" id="history-toggle">
+      <span class="history-caret">▸</span>
+      <span>Past disruptions</span>
+      <span class="history-count" id="history-count"></span>
+    </button>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
   <!-- Output -->
   <div id="output-wrap">
     <div class="output-header">
@@ -782,6 +876,30 @@
 </main>
 
 <script>
+  // ── State (localStorage) ──────────────────────────────────────
+  const STATE_KEY = 'fla_state_v1';
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STATE_KEY);
+      if (!raw) return { plan: '', phase: '', history: [] };
+      const s = JSON.parse(raw);
+      return { plan: s.plan || '', phase: s.phase || '', history: Array.isArray(s.history) ? s.history : [] };
+    } catch { return { plan: '', phase: '', history: [] }; }
+  }
+  function saveState(s) { localStorage.setItem(STATE_KEY, JSON.stringify(s)); }
+  function pruneHistory(hist) {
+    const cutoff = Date.now() - 90 * 86400000;
+    return hist.filter(h => h && h.date >= cutoff);
+  }
+  function recentHistory(hist, days = 42) {
+    const cutoff = Date.now() - days * 86400000;
+    return hist.filter(h => h && h.date >= cutoff);
+  }
+
+  let state = loadState();
+  state.history = pruneHistory(state.history);
+  saveState(state);
+
   // ── Plan pre-fills ────────────────────────────────────────────
   const PLANS = {
     running: `Mon: Easy 45 min Z2
@@ -830,6 +948,66 @@ Sun: Rest / recovery walk`,
       }
     });
   });
+
+  // ── Prefill from saved state ──────────────────────────────────
+  function applySavedState() {
+    if (state.plan) {
+      document.getElementById('training_plan').value = state.plan;
+      document.querySelector('.quick-select').style.display = 'none';
+      document.getElementById('saved-chip').style.display = '';
+    }
+    if (state.phase) {
+      document.querySelectorAll('#phase-pills .pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.value === state.phase);
+      });
+    }
+  }
+  applySavedState();
+
+  document.getElementById('clear-plan').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!confirm('Clear saved plan and disruption history?')) return;
+    state = { plan: '', phase: '', history: [] };
+    saveState(state);
+    document.getElementById('training_plan').value = '';
+    document.querySelector('.quick-select').style.display = '';
+    document.getElementById('saved-chip').style.display = 'none';
+    document.querySelectorAll('#phase-pills .pill').forEach(p => p.classList.remove('active'));
+    renderHistoryPanel();
+  });
+
+  // ── History panel ─────────────────────────────────────────────
+  function fmtDaysAgo(ts) {
+    const days = Math.max(0, Math.floor((Date.now() - ts) / 86400000));
+    if (days === 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 14) return `${days} days ago`;
+    const wks = Math.round(days / 7);
+    return `${wks} weeks ago`;
+  }
+  function renderHistoryPanel() {
+    const recent = recentHistory(state.history);
+    const panel = document.getElementById('history-panel');
+    if (!recent.length) { panel.style.display = 'none'; return; }
+    panel.style.display = '';
+    document.getElementById('history-count').textContent = `(${recent.length})`;
+    document.getElementById('history-list').innerHTML = recent.slice().reverse().map(h => {
+      const phase = h.phase || 'no phase';
+      const disruption = h.disruption || '';
+      const injury = h.injuryContext ? ` · injury noted` : '';
+      return `<div class="history-item">
+        <span class="history-item__date">${escHtml(fmtDaysAgo(h.date))}</span>
+        <div class="history-item__body">
+          <span class="history-item__phase">${escHtml(phase)}</span>${escHtml(disruption)}${escHtml(injury)}
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('history-toggle').addEventListener('click', () => {
+    document.getElementById('history-toggle').classList.toggle('open');
+    document.getElementById('history-list').classList.toggle('open');
+  });
+  renderHistoryPanel();
 
   // "Injured" pill — show/hide injury step
   document.getElementById('pill-injured').addEventListener('click', () => {
@@ -1125,11 +1303,14 @@ Sun: Rest / recovery walk`,
     output.innerHTML = '';
     progressStart();
 
+    const recent = recentHistory(state.history);
+    const historyPayload = recent.length >= 3 ? recent : [];
+
     try {
       const resp = await fetch('/api/adapt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ training_plan, disruption, phase, injury_context }),
+        body: JSON.stringify({ training_plan, disruption, phase, injury_context, history: historyPayload }),
       });
 
       if (!resp.ok) {
@@ -1153,6 +1334,21 @@ Sun: Rest / recovery walk`,
       }
 
       output.innerHTML = renderOutput(raw);
+
+      // Persist plan + log disruption
+      state.plan = training_plan;
+      state.phase = phase;
+      state.history = pruneHistory(state.history);
+      state.history.push({
+        date: Date.now(),
+        disruption,
+        phase,
+        injuryContext: injury_context,
+      });
+      saveState(state);
+      document.querySelector('.quick-select').style.display = 'none';
+      document.getElementById('saved-chip').style.display = '';
+      renderHistoryPanel();
 
     } catch (err) {
       errorBanner.textContent = `Error: ${err.message}`;
