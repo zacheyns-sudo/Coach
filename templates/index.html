@@ -194,8 +194,8 @@
       padding: 22px 22px 20px;
     }
 
-    /* Step 4 — conditional, slides in */
-    #step-4 {
+    /* Step 3 (injury) — conditional, slides in */
+    #step-3 {
       display: none;
       opacity: 0;
       transform: translateY(-6px);
@@ -204,7 +204,7 @@
       border-left: 3px solid var(--danger);
     }
 
-    #step-4.visible {
+    #step-3.visible {
       opacity: 1;
       transform: translateY(0);
     }
@@ -651,15 +651,10 @@
       <div class="step-dot">2</div>
       <span class="step-name">Disruption</span>
     </div>
-    <div class="progress-connector"></div>
-    <div class="progress-step" data-n="3">
-      <div class="step-dot">3</div>
-      <span class="step-name">Available</span>
-    </div>
-    <!-- Step 4 dot: hidden until injury selected -->
-    <div class="progress-connector" id="progress-conn-4" style="display:none;"></div>
-    <div class="progress-step" data-n="4" id="progress-step-4" style="display:none;">
-      <div class="step-dot" style="border-color:#fecaca; color:var(--danger);">4</div>
+    <!-- Step 3 dot: hidden until injury selected -->
+    <div class="progress-connector" id="progress-conn-3" style="display:none;"></div>
+    <div class="progress-step" data-n="3" id="progress-step-3" style="display:none;">
+      <div class="step-dot" style="border-color:#fecaca; color:var(--danger);">3</div>
       <span class="step-name" style="color:var(--danger);">Injury</span>
     </div>
   </div>
@@ -685,6 +680,15 @@
         placeholder="Mon: Easy 45min Z2 / Tue: 6×1km threshold / Wed: Rest..."
         required
       ></textarea>
+      <div class="field-group" style="margin-top:14px; margin-bottom:0;">
+        <span class="field-label">Training phase (optional)</span>
+        <div class="pills" id="phase-pills" style="margin-bottom:0;">
+          <button type="button" class="pill" data-value="Base">Base</button>
+          <button type="button" class="pill" data-value="Build">Build</button>
+          <button type="button" class="pill" data-value="Taper">Taper</button>
+          <button type="button" class="pill" data-value="Race week">Race week</button>
+        </div>
+      </div>
     </div>
 
     <!-- Step 2 — Disruption -->
@@ -709,29 +713,10 @@
       ></textarea>
     </div>
 
-    <!-- Step 3 — Available -->
+    <!-- Step 3 — Injury Context (conditional) -->
     <div class="form-step" id="step-3" data-step="3">
       <div class="step-header">
-        <span class="step-badge">Step 3</span>
-        <span class="step-title">What do you have this week?</span>
-      </div>
-      <div class="pills" id="available-pills">
-        <button type="button" class="pill" data-value="Gym Access">Gym Access</button>
-        <button type="button" class="pill" data-value="Treadmill Only">Treadmill Only</button>
-        <button type="button" class="pill" data-value="No Back-to-Back Hard Days">No Back-to-Back Hard Days</button>
-        <button type="button" class="pill" data-value="Limited Time">Limited Time</button>
-        <button type="button" class="pill" data-value="Nothing" id="avail-nothing">Nothing</button>
-        <button type="button" class="pill pill--other" id="avail-other-btn" data-value="Other">Other</button>
-      </div>
-      <div id="avail-other-wrap" style="display:none; margin-top:8px;">
-        <textarea id="avail-other-text" rows="2" placeholder="Describe what you have available..."></textarea>
-      </div>
-    </div>
-
-    <!-- Step 4 — Injury Context (conditional) -->
-    <div class="form-step" id="step-4" data-step="4">
-      <div class="step-header">
-        <span class="step-badge step-badge--injury">Step 4 — Injury</span>
+        <span class="step-badge step-badge--injury">Step 3 — Injury</span>
         <span class="step-title">Tell us about the injury</span>
       </div>
 
@@ -835,29 +820,40 @@ Sun: Rest / recovery walk`,
     pill.addEventListener('click', () => pill.classList.toggle('active'));
   });
 
-  // "Injured" pill — show/hide Step 4
-  document.getElementById('pill-injured').addEventListener('click', () => {
-    const isActive = document.getElementById('pill-injured').classList.contains('active');
-    toggleStep4(isActive);
+  // Phase is single-select (radio-like) — deselect siblings when one becomes active
+  document.querySelectorAll('#phase-pills .pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      if (pill.classList.contains('active')) {
+        document.querySelectorAll('#phase-pills .pill').forEach(p => {
+          if (p !== pill) p.classList.remove('active');
+        });
+      }
+    });
   });
 
-  function toggleStep4(show) {
-    const step4 = document.getElementById('step-4');
-    const conn4 = document.getElementById('progress-conn-4');
-    const dot4  = document.getElementById('progress-step-4');
+  // "Injured" pill — show/hide injury step
+  document.getElementById('pill-injured').addEventListener('click', () => {
+    const isActive = document.getElementById('pill-injured').classList.contains('active');
+    toggleInjuryStep(isActive);
+  });
+
+  function toggleInjuryStep(show) {
+    const step = document.getElementById('step-3');
+    const conn = document.getElementById('progress-conn-3');
+    const dot  = document.getElementById('progress-step-3');
 
     if (show) {
-      step4.style.display = 'block';
-      conn4.style.display = 'block';
-      dot4.style.display  = 'flex';
-      requestAnimationFrame(() => requestAnimationFrame(() => step4.classList.add('visible')));
+      step.style.display = 'block';
+      conn.style.display = 'block';
+      dot.style.display  = 'flex';
+      requestAnimationFrame(() => requestAnimationFrame(() => step.classList.add('visible')));
       updateProgress();
-      step4.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      step.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
-      step4.classList.remove('visible');
-      conn4.style.display = 'none';
-      dot4.style.display  = 'none';
-      setTimeout(() => { step4.style.display = 'none'; }, 320);
+      step.classList.remove('visible');
+      conn.style.display = 'none';
+      dot.style.display  = 'none';
+      setTimeout(() => { step.style.display = 'none'; }, 320);
       // Clear injury fields
       document.getElementById('injury-sport').value = '';
       document.getElementById('injury-desc').value = '';
@@ -867,35 +863,9 @@ Sun: Rest / recovery walk`,
     }
   }
 
-  // "Nothing" in available clears other pills
-  document.getElementById('avail-nothing').addEventListener('click', () => {
-    if (document.getElementById('avail-nothing').classList.contains('active')) {
-      document.querySelectorAll('#available-pills .pill').forEach(p => {
-        if (p.id !== 'avail-nothing') p.classList.remove('active');
-      });
-      document.getElementById('avail-other-wrap').style.display = 'none';
-    }
-  });
-
-  // Any other available pill deselects "Nothing"
-  document.querySelectorAll('#available-pills .pill').forEach(pill => {
-    if (pill.id === 'avail-nothing') return;
-    pill.addEventListener('click', () => {
-      if (pill.classList.contains('active'))
-        document.getElementById('avail-nothing').classList.remove('active');
-    });
-  });
-
-  // "Other" available pill toggles text box
-  document.getElementById('avail-other-btn').addEventListener('click', () => {
-    const isActive = document.getElementById('avail-other-btn').classList.contains('active');
-    document.getElementById('avail-other-wrap').style.display = isActive ? 'block' : 'none';
-    if (isActive) document.getElementById('avail-other-text').focus();
-  });
-
   // ── Step progress (scroll-based) ──────────────────────────────
   function updateProgress() {
-    const stepIds = ['step-1','step-2','step-3','step-4'];
+    const stepIds = ['step-1','step-2','step-3'];
     const threshold = window.innerHeight * 0.45;
     let current = 1;
     stepIds.forEach((id, i) => {
@@ -1116,16 +1086,13 @@ Sun: Rest / recovery walk`,
     const disruption_context = document.getElementById('disruption-context').value.trim();
     const disruption = [disruption_pills, disruption_context].filter(Boolean).join('. ');
 
-    const available_pills = [...document.querySelectorAll('#available-pills .pill.active')]
-      .map(p => p.dataset.value).join(', ');
-    const available_other = document.getElementById('avail-other-btn').classList.contains('active')
-      ? document.getElementById('avail-other-text').value.trim() : '';
-    const available = [available_pills, available_other].filter(Boolean).join('. ');
+    const phase = ([...document.querySelectorAll('#phase-pills .pill.active')]
+      .map(p => p.dataset.value)[0]) || '';
 
-    // Build injury_context if Step 4 is visible
+    // Build injury_context if injury step is visible
     let injury_context = '';
-    const step4Visible = document.getElementById('step-4').style.display !== 'none';
-    if (step4Visible) {
+    const injuryVisible = document.getElementById('step-3').style.display !== 'none';
+    if (injuryVisible) {
       const sport  = document.getElementById('injury-sport').value.trim();
       const desc   = document.getElementById('injury-desc').value.trim();
       const onset  = [...document.querySelectorAll('#injury-onset-pills .pill.active')].map(p => p.dataset.value).join(', ');
@@ -1162,7 +1129,7 @@ Sun: Rest / recovery walk`,
       const resp = await fetch('/api/adapt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ training_plan, disruption, available, injury_context }),
+        body: JSON.stringify({ training_plan, disruption, phase, injury_context }),
       });
 
       if (!resp.ok) {

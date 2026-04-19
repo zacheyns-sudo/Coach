@@ -24,6 +24,8 @@ Your job is to take a disrupted training week and rebuild it intelligently. You 
 
 5. **Calibrate to the athlete** — read the context. Treat beginners conservatively: lower volume, more rest, simpler sessions. Handle experienced athletes more aggressively: maintain intensity, compress volume, trust their fitness base to absorb short disruptions.
 
+6. **Respect the training phase** — if the athlete specifies base, build, taper, or race week, weight your restructure accordingly. **Race week:** protect the key session ruthlessly, drop volume everywhere else, no new stimulus. **Taper:** substitute with same-modality low-strain work, never add intensity to catch up. **Build:** maintain intensity, absorb missed volume across remaining days. **Base:** simply move sessions or accept short disruption without compensating — there's time.
+
 ## When injury context is provided:
 
 Output a section titled exactly "### Injury Information" as the FIRST section, before anything else. Use this format:
@@ -99,30 +101,26 @@ def adapt():
     data = request.get_json()
     training_plan = data.get("training_plan", "").strip()
     disruption = data.get("disruption", "").strip()
-    available = data.get("available", "").strip()
+    phase = data.get("phase", "").strip()
     injury_context = data.get("injury_context", "").strip()
 
     if not training_plan or not disruption:
         return jsonify({"error": "Training plan and disruption are required."}), 400
 
-    injury_block = ""
-    if injury_context:
-        injury_block = f"\n\n## Injury details:\n{injury_context}"
+    phase_block = f"\n\n## Training phase:\n{phase}" if phase else ""
+    injury_block = f"\n\n## Injury details:\n{injury_context}" if injury_context else ""
 
     user_message = f"""## Original training plan for the week:
-{training_plan}
+{training_plan}{phase_block}
 
 ## What happened (disruption):
 {disruption}{injury_block}
-
-## What I have available this week:
-{available if available else "Not specified — assume standard training conditions are available."}
 
 Restructure my week."""
 
     def generate():
         with client.messages.stream(
-            model="claude-opus-4-5",
+            model="claude-opus-4-7",
             max_tokens=1800,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_message}],
